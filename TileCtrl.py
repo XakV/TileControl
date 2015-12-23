@@ -1,6 +1,7 @@
 #!/usr/env/python3
 
 import subprocess
+import tinydb
 
 ## define the window object, having an id, a desktop, a role, and x/y pos + size
 ## methods include moving, and resizing, may also include killing
@@ -23,46 +24,14 @@ class obwin(object):
         self.width = newidth
         self.height = nwheight
 
-## Represents the placement of windows on the screen.
-
-class layout(object):
-    def __init__(self):
-        self.numbrwndows = 0
-        self.layout =''
-        self.reversed = 'False'
-        self.floating = 'False'
-        
-    def masterRL(self, winmatrix[]):
-        for window in winmatrix[]:
-            if winmatrix[window].role == 'master'
-                obwin.move(winmatrix[window].hexid, 20, 20)
-                obwin.resize(winmatrix[window].hexid, 1000, 920)
-            if winmatrix[window].role == 'sub1'
-                obwin.move(winmatrix[window].hexid, 1040, 20)
-                obwin.resize(winmatrix[window].hexid, 860, 480)
-            if winmatrix[window].role == 'sub2'
-                obwin.move(winmatrix[window].hexid, 1040, 500)
-                obwin.resize(winmatrix[window].hexid, 860, 400)
-    
-    def masterLR(self, winmatrix[]):
-        for window in winmatrix[]:
-            if winmatrix[window].role == 'master'
-                obwin.move(winmatrix[window].hexid, 900, 20)
-                obwin.resize(winmatrix[window].hexid, 1000, 920)
-            if winmatrix[window].role == 'sub1'
-                obwin.move(winmatrix[window].hexid, 20, 20)
-                obwin.resize(winmatrix[window].hexid, 860, 480)
-            if winmatrix[window].role == 'sub2'
-                obwin.move(winmatrix[window].hexid, 20, 500)
-                obwin.resize(winmatrix[window].hexid, 860, 400)
-
 ## function to get active windows and assign a role
 ## see man wmctrl for info on wmctrl command
     
-def get ():
-    roles = ['master',  'sub1', 'sub2',  'sub3',  'floatfull',  'floatbar']
+def buildwindb():
+    roles = ['master',  'sub1', 'sub2',  'sub3',  'sub4']
     rolemark = 0
-    winmatrix = []
+	oldesk = -1
+    windodb = tinydb('/tmp/windodb.json')
     with subprocess.Popen(['wmctrl', '-lG'], stdout=subprocess.PIPE, universal_newlines=True) as wmctrlg:
         winout = wmctrlg.stdout.read().splitlines()
     for line in winout:
@@ -74,9 +43,12 @@ def get ():
         width = winline[4]
         height = winline[5]
         role = roles[rolemark]
-        rolemark += 1
-        winmatrix.append(obwin(hexid, dsktp, xpos, ypos, width, height, role))
-    return winmatrix
+		if dsktp == oldesk:
+		    rolemark += 1
+		else:
+		    rolemark = 0
+        windodb.insert({'hexid': hexid, 'desktop': dsktp, 'xposv': xpos, 'ypos': ypos, 'width': width, 'height': height, 'role': role})		
+    return windodb
 
 ## Function to get screen dimensions and active desktop
 ## see man wmctrl for info on wmctrl command
@@ -93,4 +65,13 @@ def getscreen():
                 curdeskxstr,curdeskystr = screensize.split('x')
                 print(curdeskxstr,  curdeskystr)
     return int(deskid), int(curdeskxstr), int(curdeskystr)
+
+def master_rl(windodb):
     
+    getscreen()
+    desktop = windodb.search()
+
+    
+#movecmdprefx = 'wmctrl -i -r'
+#winmovarg = '-e'
+	

@@ -46,9 +46,9 @@ def get_environ():
                 ws_active = False
             if deskline[5] != 'N/A':
                 ws_ordinal = deskline[8]
-                ws_xpos, ws_ypos = ws_ordinal.split','
+                ws_xpos, ws_ypos = ws_ordinal.split(',')
                 dimension = deskline[9]
-                ws_xdim, ws_ydim = dimension.split'x'
+                ws_xdim, ws_ydim = dimension.split('x')
                 ws_name = deskline[10]
                 d_env[ws_count] = workspace(ws_num, ws_xpos, ws_ypos, ws_xdim, ws_ydim, ws_name, ws_active)
                 ws_count += 1
@@ -65,10 +65,10 @@ def get_ws_info():
         win_count = 0
         for line in ws_scrape:
             ws_line = line.split(' ')
-            win_i   d = ws_line[0]
+            win_id = ws_line[0]
             win_ws = ws_line[1]
             win_xpos = ws_line[2]
-            win_y   pos = ws_line[3]
+            win_ypos = ws_line[3]
             win_xdim = ws_line[4]
             win_ydim = ws_line[5]            else:
                 win_stack[win_count] = window(win_id, win_ws, win_xpos, win_ypos, win_xdim, win_ydim, stack_ord)

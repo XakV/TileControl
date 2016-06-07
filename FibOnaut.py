@@ -9,32 +9,48 @@
 
 import subprocess
 
-class workspace(object):
-    def __init__(self, ws_num, ws_xpos, ws_ypos, ws_xdim, ws_ydim, ws_name, ws_active):
-        self.ws_num = ws_num
-        self.ws_xpos = ws_xpos
-        self.ws_ypos = ws_ypos
-        self.ws_xdim = ws_xdim
-        self.ws_ydim = ws_ydim
-        self.ws_name = ws_name
-        self.ws_active = ws_active
-#        self.ws_tiled = ws_tiled
-#TODO if all this mess is working then we can create a variable and a function
-#TODO for tiled state and master on left or master on right
 
-class window(object):
-    def __init__(self, win_id, win_ws, win_xpos, win_ypos, win_xdim, win_ydim, stack_ord):
+#base class - a workspace or a window will inherit these attributes
+#focus is a synonym for master and master window will always have focus
+#master workspace will always be active
+
+class rectangle:
+    def __init__(self, xpos, ypos, xdim, ydim, name, focus):
+        self.xpos = xpos
+        self.ypos = ypos
+        self.xdim = xdim
+        self.ydim = ydim
+        self.name = name
+        self.focus = False
+
+class window:
+    def __init__(self, win_id, rectangle):
         self.win_id = win_id
-        self.win_ws = win_ws
-        self.win_xpos = win_xpos
-        self.win_ypos = win_ypos
-        self.win_xdim = win_xdim
-        self.win_ydim = win_ydim
-        self.stack_ord = stack_ord
+        self.rectangle = rectangle
+        
+
+class workspace:
+    def __init__(self, ws_num, rectangle, winstack):
+        self.ws_num = ws_num
+        self.ws_rectangle = rectangle
+        self.ws_winstack = winstack
+        self.ws_tiled = "Float"
+
+#class winstack:
+#  def __init__(self, window_dict{}):
+#        self.window_dict =
+# TODO - is a stack of windows a list, a dict, or a tuple?
+# this object should be attached to a workspace as ws_winstack
+# a window stack needs to be able to pop a window out of the stack and send it to another?
+
+#TODO def tile():
+#TODO - review gathering arguments, take one arg for float, one for tile, one for reverse_tile
+#Will always operate on focused workspace
+#defaults to stack_ord[0] is master and focused
+#TODO - move this to after get_environ call
 
 def get_environ():
     d_env = []
-    ws_count = 0
     with subprocess.Popen(['wmctrl', '-d'], stdout=subprocess.PIPE, universal_newlines=True) as wmctrld:
         desktop_scrape = wmctrld.stdout.read().splitlines()
         for line in desktop_scrape:
@@ -42,54 +58,38 @@ def get_environ():
             print(deskline)
             ws_num = deskline[0]
             if deskline[2] == '*':
-                ws_active = True
+                rectangle.focus = True
             else:
-                ws_active = False
-            if deskline[7] != 'N/A':
-                ws_ordinal = deskline[10]
-                ws_xpos, ws_ypos = ws_ordinal.split(',')
-                dimension = deskline[11]
-                ws_xdim, ws_ydim = dimension.split('x')
-                ws_name = deskline[12]
-                d_env[ws_count] = workspace(ws_num, ws_xpos, ws_ypos, ws_xdim, ws_ydim, ws_name, ws_active)
-                ws_count += 1
-            else:
-                pass
-        return d_env
+                rectangle.focus = False
+            ws_ordinal = deskline[10]
+            rectangle.xpos, rectangle.ypos = ws_ordinal.split(',')
+            dimension = deskline[11]
+            rectangle.xdim, rectangle.ydim = dimension.split('x')
+            rectangle.name = deskline[13]
+            d_env.append(workspace(ws_num, rectangle))
+    return d_env
 
 
 def get_ws_info():
     win_stack = []
-    with subprocess.Popen(['wmctrl', '-lG'], stdout=subprocess.PIPE, universal_newlines=True) as wmctrlg:
+    with subprocess.Popen(['wmctrl', '-l'], stdout=subprocess.PIPE, universal_newlines=True) as wmctrlg:
+#TODO Refactor to deal with changing from wmctrl -lG to wmctrl -l
         ws_scrape = wmctrlg.stdout.read().splitlines()
-        stack_ord = 0
-        win_count = 0
         for line in ws_scrape:
             ws_line = line.split(' ')
-            win_id = ws_line[0]
+            win_id, rectangle.name = ws_line[0]
             win_ws = ws_line[1]
-            win_xpos = ws_line[2]
-            win_ypos = ws_line[3]
-            win_xdim = ws_line[4]
-            win_ydim = ws_line[5]
-            if win_count >= 1:
-                if win_stack[win_count - 1].win_ws == win_ws:
-                    win_count += 1
-                    stack_ord += 1
-                    win_stack[win_count] = window(win_id, win_ws, win_xpos, win_ypos, win_xdim, win_ydim, stack_ord)
-                else:
-                    stack_ord = 0
-                    win_stack[win_count] = window(win_id, win_ws, win_xpos, win_ypos, win_xdim, win_ydim, stack_ord)
-                    win_count += 1
-            else:
-                win_stack[win_count] = window(win_id, win_ws, win_xpos, win_ypos, win_xdim, win_ydim, stack_ord)
-                win_count += 1
+            rectangle.xpos = ws_line[2]
+            rectangle.ypos = ws_line[3]
+            rectangle.xdim = ws_line[4]
+            rectangle.ydim = ws_line[5]
+            win_stack.append(window(win_id, win_ws, rectangle))       
     return win_stack
 
 d_env = get_environ()
 for x in d_env:
-    print(x)
+    print(x.ws_name)
 win_stack = get_ws_info()
 for y in win_stack:
-    print(y)
+    print(y.win_xdim)
 

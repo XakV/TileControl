@@ -31,11 +31,11 @@ class window:
         
 
 class workspace():
-    def __init__(self, ws_num, rectangle, winstack):
+    def __init__(self, ws_num, ws_rectangle, ws_winstack,  ws_tiled):
         self.ws_num = ws_num
-        self.ws_rectangle = rectangle
-        self.ws_winstack = winstack
-        self.ws_tiled = "Float"
+        self.ws_rectangle = ws_rectangle
+        self.ws_winstack = ws_winstack
+        self.ws_tiled = ws_tiled
         
 def get_environ():
     d_env = []
@@ -44,21 +44,22 @@ def get_environ():
         for line in desktop_scrape:
             deskline = line.split(' ')
             print(deskline)
-            ws_num = deskline[0]
+            wks_num = deskline[0]
             if deskline[2] == '*':
-                rectangle.focus = True
+                wksrctngl_focus = True
             else:
-                rectangle.focus = False
-            ws_ordinal = deskline[10]
-            ws_rectangle = rectangle
-            xpos_chr, ypos_chr = ws_ordinal.split(',')
+                wksrctngl_focus = False
+            wks_ordinal = deskline[10]
+            xpos_chr, ypos_chr = wks_ordinal.split(',')
             dimension = deskline[11]
             xdim_chr, ydim_chr = dimension.split('x')
             chr_dim = [xpos_chr,  ypos_chr,  xdim_chr,  ydim_chr]
-            ws_rectangle.xpos, ws_rectangle.ypos, ws_rectangle.xdim, ws_rectangle.ydim = [ int(dim) for dim in chr_dim ]
-            ws_rectangle.name = deskline[13]
-            win_stack = get_win_stack(ws_num)
-            d_env.append(workspace(ws_num, ws_rectangle, win_stack))
+            wks_xpos, wks_ypos, wks_xdim, wks_ydim = [ int(dim) for dim in chr_dim ]
+            wks_name = deskline[13]
+            wks_winstack = get_win_stack(wks_num)
+            wks_rectangle = rectangle(wks_xpos,  wks_ypos,  wks_xdim,  wks_ydim,  wks_name,  wksrctngl_focus)
+            enum_ws = workspace(wks_num,  wks_rectangle,  wks_winstack,  "Float")
+            d_env.append(enum_ws)
     return d_env
 
 
@@ -69,19 +70,22 @@ def get_win_stack(ws_num):
         ws_scrape = wmctrlg.stdout.read().splitlines()
         for line in ws_scrape:
             ws_line = line.split(' ')
-            win_id = ws_line[0]
-            win_ws = ws_line[1]
-            if win_ws == ws_num:
-                win_stack.append(window[win_id, win_ws])
+            winid = ws_line[0]
+            winws = ws_line[2]
+            print(ws_num, winid,  winws)
+            win = window(winid, winws)
+            if win.win_ws == ws_num:
+                win_stack.append(win)
     return win_stack
 
 
 #screen is the root window found in get_environ
 #returns the geometry of the first split and the remaining screen
+'''declare all instances correctly'''
 def calculate_split(screen):
     vsplit_pos = ((screen.xdim / 5 ) * 3 )
     hsplit_pos = ((screen.ydim / 5 ) * 3 )
-    screen_remnt = rectangle
+    screen_remnt = rectangle  #right here and other places?
     screen_remnt.xdim = screen.xdim - vsplit_pos
     screen_remnt.ydim = screen.ydim - hsplit_pos
     screen_remnt.xpos = vsplit_pos
@@ -125,14 +129,15 @@ def init_FibTile():
     desktop_init = get_environ()
     print(desktop_init)
     print(type(desktop_init))
-    
-    for werkspace in desktop_init:
+    for x in enumerate(desktop_init):
+        print(x)
+    for werkspace in enumerate(desktop_init):
         split_vpos, split_hpos, screen, split_rmnt = calculate_split(werkspace.ws_rectangle)
-        for window in werkspace:
+        for window in werkspace.winstack:
             new_geom = '0' + ',' + screen.xpos + ',' + screen.ypos + ',' + split_vpos + ',' + split_hpos
             move_rectangle(window.id, new_geom)
-            workspace.ws_rectangle = split_rmnt
-        if workspace.focus == True:
+            werkspace.ws_rectangle = split_rmnt
+        if werkspace.focus == True:
             wait_key()
     
 

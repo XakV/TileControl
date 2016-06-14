@@ -83,24 +83,22 @@ def get_win_stack(ws_num):
 #returns the geometry of the first split and the remaining screen
 '''declare all instances correctly'''
 def calculate_split(screen):
-    vsplit_pos = ((screen.xdim / 5 ) * 3 )
-    hsplit_pos = ((screen.ydim / 5 ) * 3 )
-    screen_remnt = rectangle  #right here and other places?
-    screen_remnt.xdim = screen.xdim - vsplit_pos
-    screen_remnt.ydim = screen.ydim - hsplit_pos
-    screen_remnt.xpos = vsplit_pos
-    screen_remnt.ypos = hsplit_pos
-    screen_remnt.name = screen.name + "sub"
+    vsplit_pos = int((screen.xdim / 5 ) * 3 )
+    hsplit_pos = int((screen.ydim / 5 ) * 3 )
+    xdim = screen.xdim - vsplit_pos
+    ydim = screen.ydim - hsplit_pos
+    xpos = vsplit_pos
+    ypos = hsplit_pos
+    name = screen.name + "sub"
+    screen_remnt = rectangle(xpos, ypos, xdim, ydim, name, "False")
     return vsplit_pos, hsplit_pos, screen, screen_remnt
 
 
 #takes a window rectangle and a new geometry for the window
 #returns stdout
 def move_rectangle(win_id, new_geom):
-    move_call_prefix = 'wmctrl -i -r'
-    move_call_args = win_id + ' ' + new_geom
-    with subprocess.Popen([move_call_prefix, move_call_args],  stdout=subprocess.PIPE) as win_move_call:
-        mv_call_retval = win_move_call.std.read()
+    with subprocess.Popen(['/usr/bin/wmctrl', '-i', '-r', win_id, '-e', new_geom], stdout=subprocess.PIPE, shell=True) as win_move_call:
+        mv_call_retval = win_move_call.std.communicate()
     return mv_call_retval
 
 
@@ -131,14 +129,16 @@ def init_FibTile():
     print(type(desktop_init))
     for x in enumerate(desktop_init):
         print(x)
-    for werkspace in enumerate(desktop_init):
-        split_vpos, split_hpos, screen, split_rmnt = calculate_split(werkspace.ws_rectangle)
-        for window in werkspace.winstack:
-            new_geom = '0' + ',' + screen.xpos + ',' + screen.ypos + ',' + split_vpos + ',' + split_hpos
-            move_rectangle(window.id, new_geom)
-            werkspace.ws_rectangle = split_rmnt
-        if werkspace.focus == True:
-            wait_key()
+    ## TODO add a bit of logic here to skip the 0th desktop or bar
+    for werkspace in desktop_init:
+        if werkspace.ws_num != '0':
+            split_vpos, split_hpos, screen, split_rmnt = calculate_split(werkspace.ws_rectangle)
+            for window in werkspace.ws_winstack:
+                new_geom = '0' + ',' + str(screen.xpos) + ',' + str(screen.ypos) + ',' + str(split_vpos) + ',' + str(split_hpos)
+                move_rectangle(window.win_id, new_geom)
+                werkspace.ws_rectangle = split_rmnt
+            if werkspace.focus == True:
+                wait_key()
     
 
 init_FibTile()
